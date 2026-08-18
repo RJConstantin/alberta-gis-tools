@@ -17,6 +17,15 @@ const AB10TM = '+proj=tmerc +lat_0=0 +lon_0=-115 +k=0.9992 +x_0=500000 +y_0=0 +d
 const nativeFetch = window.fetch.bind(window);
 let imagePromise = null;
 
+function resetCheckboxDefaults() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = false;
+  });
+}
+
+resetCheckboxDefaults();
+window.addEventListener('pageshow', resetCheckboxDefaults);
+
 async function getAbmiImage() {
   if (!imagePromise) {
     imagePromise = fromUrl(ABMI_TIFF).then(tiff => tiff.getImage()).catch(error => {
@@ -88,8 +97,6 @@ async function classesForBufferedFeature(image, feature, found) {
   const rowWidth = x1 - x0;
   if (rowWidth <= 0) return;
 
-  // Read the source raster in bounded chunks so large corridor projects do not
-  // require the whole project bounding box in memory at once.
   const maxCellsPerChunk = 350000;
   const rowsPerChunk = Math.max(1, Math.floor(maxCellsPerChunk / rowWidth));
 

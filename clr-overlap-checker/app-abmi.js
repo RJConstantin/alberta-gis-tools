@@ -4,6 +4,8 @@ import * as turf from 'https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/+esm';
 
 const ABMI_TIFF = 'https://ftp-public.abmi.ca//GISData/ABMIWetlandInventory/ABMIwetlandInventory.tif';
 const ABMI_SOURCE = 'https://abmi.ca/data-portal/40.html';
+const FMA_LAYER = 'https://geospatial.alberta.ca/titan/rest/services/boundaries/forest_management_agreement_public/FeatureServer/0';
+const RFMA_LAYER = 'https://geospatial.alberta.ca/titan/rest/services/boundaries/registered_fur_managment/featureserver/0';
 const ABMI_CLASS = new Map([
   [0, 'Open water'],
   [1, 'Fen'],
@@ -25,6 +27,26 @@ function resetCheckboxDefaults() {
 
 resetCheckboxDefaults();
 window.addEventListener('pageshow', resetCheckboxDefaults);
+
+function addForestryAndTrappingOptions() {
+  const grid = document.querySelector('.screen-grid');
+  if (!grid || document.getElementById('screenFma') || document.getElementById('screenRfma')) return;
+
+  const fma = document.createElement('label');
+  fma.className = 'screen-option';
+  fma.innerHTML = '<input id="screenFma" type="checkbox"><span>Forest Management Agreements<small>FMA holder/name, agreement number and effective date</small></span>';
+
+  const rfma = document.createElement('label');
+  rfma.className = 'screen-option';
+  rfma.innerHTML = '<input id="screenRfma" type="checkbox"><span>Registered Fur Management Areas<small>Public trapper-area boundary and RFMA code</small></span>';
+
+  const insertBefore = document.getElementById('screenIndigenous')?.closest('label');
+  if (insertBefore) insertBefore.before(fma, rfma);
+  else grid.append(fma, rfma);
+
+  fma.querySelector('input').checked = false;
+  rfma.querySelector('input').checked = false;
+}
 
 async function getAbmiImage() {
   if (!imagePromise) {
@@ -157,7 +179,39 @@ window.__screenAbmiWetlands = async function screenAbmiWetlands(project) {
   };
 };
 
+const EXTRA_SCREENERS = `
+function formatScreeningDate(value){
+  if(value===null||value===undefined||value==='')return '';
+  const numeric=Number(value);
+  const date=Number.isFinite(numeric)?new Date(numeric):new Date(value);
+  if(Number.isNaN(date.getTime()))return clean(value);
+  return date.toISOString().slice(0,10);
+}
+async function screenFma(project,bbox){
+  const data=await queryGeoJson('${FMA_LAYER}',bbox,{outFields:'FMA_NAME,FMA_CODE,EFFECTIVE,FMA_NUM,WEB_LINK',maxFeatures:5000});
+  const entries=filterHits(project.features,data.features).map(feature=>{
+    const p=feature.properties||{};
+    const name=clean(p.FMA_NAME)||'Forest Management Agreement';
+    const details=[p.FMA_NUM?\`Agreement number: \${p.FMA_NUM}\`:'',p.FMA_CODE?\`FMA code: \${p.FMA_CODE}\`:'',p.EFFECTIVE?\`Effective: \${formatScreeningDate(p.EFFECTIVE)}\`:''];
+    return simpleEntry(name,details);
+  });
+  return {key:'fma',title:'Forest Management Agreements (FMA)',hits:dedupeEntries(entries),note:'Public Government of Alberta FMA layer. The FMA name identifies the agreement holder/name published with the agreement area.'};
+}
+async function screenRfma(project,bbox){
+  const data=await queryGeoJson('${RFMA_LAYER}',bbox,{outFields:'RFMA_NAME,RFMA_CODE',maxFeatures:5000});
+  const entries=filterHits(project.features,data.features).map(feature=>{
+    const p=feature.properties||{};
+    const name=clean(p.RFMA_NAME)||'Registered Fur Management Area';
+    return simpleEntry(name,[p.RFMA_CODE?\`RFMA code: \${p.RFMA_CODE}\`:'']);
+  });
+  return {key:'rfma',title:'Registered Fur Management Areas',hits:dedupeEntries(entries),note:'Public Government of Alberta trapper-area boundaries. The public GIS layer provides RFMA name/code but does not publish the individual licence-holder name or contact information.'};
+}
+`;
+
 async function loadScreeningApp() {
+  addForestryAndTrappingOptions();
+  resetCheckboxDefaults();
+
   const response = await nativeFetch('./app.js', { cache: 'no-store' });
   if (!response.ok) throw new Error(`Could not load the screening application (HTTP ${response.status}).`);
   let source = await response.text();
@@ -171,7 +225,16 @@ async function loadScreeningApp() {
     "wetlands: 'https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3',",
     `wetlands: '${ABMI_SOURCE}',`
   );
+  source = source.replace(
+    "'screenClr','screenHistoric','screenParks','screenPluz','screenCaribou','screenSpecialWaters','screenWetlands','screenIndigenous','screenGreenWhite'",
+    "'screenClr','screenHistoric','screenParks','screenPluz','screenCaribou','screenSpecialWaters','screenWetlands','screenFma','screenRfma','screenIndigenous','screenGreenWhite'"
+  );
+  source = source.replace('function renderActions(actions){', `${EXTRA_SCREENERS}\nfunction renderActions(actions){`);
   source = source.replace("{id:'screenWetlands',label:'Wetlands',run:screenWetlands}", "{id:'screenWetlands',label:'ABMI Wetland Inventory',run:screenWetlands}");
+  source = source.replace(
+    "{id:'screenWetlands',label:'ABMI Wetland Inventory',run:screenWetlands},",
+    "{id:'screenWetlands',label:'ABMI Wetland Inventory',run:screenWetlands},\n  {id:'screenFma',label:'Forest Management Agreements',run:screenFma},\n  {id:'screenRfma',label:'Registered Fur Management Areas',run:screenRfma},"
+  );
   source = source.replace('Select at least one Government of Alberta layer to screen.', 'Select at least one screening layer.');
 
   const moduleUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));

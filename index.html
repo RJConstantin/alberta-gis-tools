@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Alberta GIS Tools</title>
+  <style>
+    :root{
+      --ink:#172229;
+      --muted:#67747a;
+      --line:#dce3e1;
+      --paper:#fbfcfa;
+      --green:#1a6a59;
+      --green-dark:#135746;
+      --mint:#e4f0eb;
+      --sand:#f2f0e9;
+      --white:#ffffff;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      background:var(--paper);
+      color:var(--ink);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+
+    .topbar{
+      height:70px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 clamp(24px,5vw,76px);
+      border-bottom:1px solid var(--line);
+      background:rgba(251,252,250,.96);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:11px;
+      font-size:15px;
+      font-weight:700;
+    }
+
+    .brand-mark{
+      width:28px;
+      height:28px;
+      border-radius:7px;
+      display:grid;
+      place-items:center;
+      background:var(--green);
+      color:#fff;
+      font:700 17px Georgia,serif;
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .status-dot{
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#4f9975;
+    }
+
+    .hero{
+      padding:78px clamp(24px,12vw,184px) 72px;
+      background:var(--sand);
+      border-bottom:1px solid var(--line);
+    }
+
+    .eyebrow{
+      color:var(--green);
+      letter-spacing:1.35px;
+      text-transform:uppercase;
+      font-size:11px;
+      font-weight:800;
+    }
+
+    h1{
+      max-width:830px;
+      margin:14px 0 18px;
+      font:700 clamp(42px,5.4vw,74px)/.98 Georgia,"Times New Roman",serif;
+      letter-spacing:-2.6px;
+    }
+
+    .hero p{
+      max-width:760px;
+      margin:0;
+      color:#516066;
+      font-size:18px;
+      line-height:1.55;
+    }
+
+    .content{
+      max-width:1180px;
+      margin:0 auto;
+      padding:58px 28px 90px;
+    }
+
+    .section-label{
+      color:var(--green);
+      letter-spacing:1.2px;
+      text-transform:uppercase;
+      font-size:11px;
+      font-weight:800;
+      margin-bottom:14px;
+    }
+
+    .section-title{
+      margin:0 0 10px;
+      font:700 30px/1.15 Georgia,"Times New Roman",serif;
+      letter-spacing:-.6px;
+    }
+
+    .section-copy{
+      margin:0 0 28px;
+      max-width:700px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .tool-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:22px;
+    }
+
+    .tool-card{
+      min-height:280px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding:30px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:var(--white);
+      box-shadow:0 8px 24px rgba(28,55,47,.045);
+      transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+    }
+
+    .tool-card:hover{
+      transform:translateY(-2px);
+      border-color:#a9c5ba;
+      box-shadow:0 12px 30px rgba(28,55,47,.075);
+    }
+
+    .tool-icon{
+      width:46px;
+      height:46px;
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      background:var(--mint);
+      color:var(--green);
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:24px;
+    }
+
+    .tool-card h2{
+      margin:0 0 10px;
+      font:700 26px/1.15 Georgia,"Times New Roman",serif;
+      letter-spacing:-.55px;
+    }
+
+    .tool-card p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+      max-width:470px;
+    }
+
+    .tool-meta{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+    }
+
+    .pill{
+      padding:5px 8px;
+      border-radius:999px;
+      background:#f3f7f5;
+      border:1px solid #dce8e3;
+      color:#597068;
+      font-size:11px;
+      font-weight:700;
+    }
+
+    .open-link{
+      align-self:flex-start;
+      margin-top:26px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+      color:#fff;
+      background:var(--green);
+      border-radius:7px;
+      padding:12px 16px;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .open-link:hover{
+      background:var(--green-dark);
+    }
+
+    .footer{
+      border-top:1px solid var(--line);
+      color:#7a8682;
+      font-size:12px;
+      text-align:center;
+      padding:24px;
+    }
+
+    @media (max-width:760px){
+      .topbar{padding:0 20px}
+      .hero{padding:56px 24px}
+      .content{padding:42px 20px 70px}
+      .tool-grid{grid-template-columns:1fr}
+      .tool-card{min-height:250px}
+      .status{display:none}
+      h1{letter-spacing:-1.8px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div>Alberta GIS Tools</div>
+    </div>
+    <div class="status">
+      <span class="status-dot"></span>
+      Browser-based GIS utilities
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">GIS Utility Portal</div>
+    <h1>Simple tools for common Alberta GIS tasks.</h1>
+    <p>
+      Open the tool you need below. Each utility runs as its own page and is designed
+      to reduce the amount of GIS knowledge required for routine file and coordinate work.
+    </p>
+  </section>
+
+  <main class="content">
+    <div class="section-label">Available tools</div>
+    <h2 class="section-title">Choose a tool</h2>
+    <p class="section-copy">
+      These tools are separate from this portal. Opening one will take you directly to that utility.
+    </p>
+
+    <div class="tool-grid">
+      <article class="tool-card">
+        <div>
+          <div class="tool-icon">S</div>
+          <h2>Alberta Submission File Converter</h2>
+          <p>
+            Prepare GIS submission files for Alberta workflows, including OSE processing,
+            polygon cleanup, attribute standardization, and submission-ready ZIP creation.
+          </p>
+          <div class="tool-meta">
+            <span class="pill">Shapefiles</span>
+            <span class="pill">OSE</span>
+            <span class="pill">Submission ZIPs</span>
+          </div>
+        </div>
+        <a class="open-link"
+           href="https://rjconstantin.github.io/alberta-submission-file-converter/"
+           target="_blank"
+           rel="noopener">
+          Open Submission Converter →
+        </a>
+      </article>
+
+      <article class="tool-card">
+        <div>
+          <div class="tool-icon">C</div>
+          <h2>Coordinate System Converter</h2>
+          <p>
+            Convert coordinate lists between common Alberta and geographic formats,
+            with automatic input detection and simplified output choices.
+          </p>
+          <div class="tool-meta">
+            <span class="pill">Coordinates</span>
+            <span class="pill">10TM / 3TM / UTM</span>
+            <span class="pill">ATS</span>
+          </div>
+        </div>
+        <a class="open-link"
+           href="https://rjconstantin.github.io/coordinate-system-converter/"
+           target="_blank"
+           rel="noopener">
+          Open Coordinate Converter →
+        </a>
+      </article>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Alberta GIS Tools
+  </footer>
+</body>
+</html>

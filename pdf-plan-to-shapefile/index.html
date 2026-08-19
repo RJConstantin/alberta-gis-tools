@@ -6,6 +6,7 @@
   <title>PDF Plan to Shapefile</title>
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./flattened-plan.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -46,7 +47,7 @@
         <label class="dropzone" id="planPdfDrop" for="planPdfInput">
           <span class="upload-arrow">↑</span>
           <strong id="planPdfName">Drop a survey plan PDF here or click to browse</strong>
-          <span>Digital/vector PDFs work best. Flattened plans can still be positioned manually from the legal location and plan dimensions.</span>
+          <span>Digital/vector PDFs are read directly. Flattened image-based plans automatically use an OCR fallback to look for the legal location, dimensions, and bearings.</span>
         </label>
         <div class="status" id="pdfStatus">No PDF loaded.</div>
         <div class="preview-wrap hidden" id="pdfPreviewWrap">

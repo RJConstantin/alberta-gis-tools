@@ -10,50 +10,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply Arial, blue theme, disclaimer, and landing cleanup
+      - name: Finish blue palette cleanup
         shell: python
         run: |
           from pathlib import Path
-          import re
-
           replacements = {
-              '--green-dark':'--blue-dark','--green':'--blue','var(--green-dark)':'var(--blue-dark)','var(--green)':'var(--blue)',
-              '#1a6a59':'#2463a0','#135746':'#174a78','#e4f0eb':'#e7f0f8','#4f9975':'#4f86b8','#a9c5ba':'#a9bfd5',
-              '#dce8e3':'#dce7f1','#f3f7f5':'#f3f7fb','#bdd0c8':'#bfd1e2','#8aaaa1':'#8da8c0','#d4e2db':'#d5e2ee',
-              '#f5faf7':'#f5f8fc','#4d625a':'#4d6173','#cfe0d7':'#d0dfed','#dfeee6':'#e0edf8','#8eb5a5':'#8fafd0',
-              '#f7fbf8':'#f7f9fc','#f2f8f4':'#f2f6fb','#426158':'#42617a','#d6e3dc':'#d6e2ed','#eef5f0':'#eef4fa',
-              '#cfddd5':'#cedde9','#d9ecdf':'#dceaf6','#d7e2dd':'#d7e2ec','#f7faf8':'#f7f9fc','#f8faf9':'#f8fafc',
-              '#eaf4ed':'#eaf2f9','#4b7057':'#4b6f91','#475c54':'#475d70','#5d6965':'#5d6974','#53615d':'#53616d',
-              '#55635f':'#55636f','#556167':'#556675','#5d6d68':'#5d6d78','#71807a':'#71808b','#73807b':'#73808c',
-              '#5e6c69':'#5e6c78','#cfd9d5':'#cfd9e3','#aabbb5':'#aabac8','#fbfdfb':'#fbfcfe','#b9d7c9':'#b9d2e8',
-              '#f4faf6':'#f4f8fc','#d5ddda':'#d5dde5','#cbd4d1':'#cbd5de','#edf0ee':'#edf1f5','#f5f8f6':'#f5f8fb',
-              '#4f5c61':'#4f5f6d','#64716d':'#64717c','#68736f':'#687583','#85908d':'#85909c','#879296':'#87929e',
-              '#88948f':'#8895a0','#899498':'#8995a0','#a9c5ba':'#a9bfd5','#dce8e3':'#dce7f1'
+              '#4f765f':'#4b6f91',
+              '#f1f7f3':'#eef4fa',
+              '#53605d':'#53616d',
+              '#f0f2ef':'#f0f3f7',
+              '#597068':'#597084',
+              '#7a8682':'#7a8792',
+              '#718079':'#71808b',
+              '#74807c':'#74808c',
+              '#63706c':'#63717c',
+              '#849094':'#84909f',
+              'rgba(28,55,47,.045)':'rgba(31,72,110,.045)',
+              'rgba(28,55,47,.075)':'rgba(31,72,110,.075)'
           }
-          disclaimer = '''<footer class="site-disclaimer"><strong>Disclaimer:</strong> These browser based GIS tools are intended for preliminary screening, data preparation and general reference. Results depend on the accuracy, completeness, availability and currency of the source data and services. Verify outputs against the applicable authoritative source before using them for regulatory submissions, surveying, field decisions or other professional work.</footer>'''
-
-          def restyle(path, landing=False):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              for old, new in replacements.items():
-                  s = s.replace(old, new)
-              s = s.replace('Georgia,"Times New Roman",serif', 'Arial,Helvetica,sans-serif')
-              s = s.replace('Georgia,serif', 'Arial,Helvetica,sans-serif')
-              s = s.replace('Consolas,"Courier New",monospace', 'Arial,Helvetica,sans-serif')
-              if landing:
-                  s = re.sub(r'\s*<p class="section-copy">\s*These tools are separate from this portal\. Opening one will take you directly to that utility\.\s*</p>\s*', '\n', s, count=1)
-              if '.site-disclaimer{' not in s:
-                  s = s.replace('</style>', '.site-disclaimer{border-top:1px solid var(--line);color:#6f7c88;max-width:1260px;margin:0 auto;padding:24px 28px 32px;font-size:11px;line-height:1.55;font-family:Arial,Helvetica,sans-serif}\n</style>', 1)
-              if 'These browser based GIS tools are intended for preliminary screening' not in s:
-                  s = s.replace('</body>', disclaimer + '\n</body>', 1)
-              p.write_text(s, encoding='utf-8')
-
-          restyle('index.html', landing=True)
-          restyle('clr-overlap-checker/index.html')
-      - name: Commit page changes
+          for path in ['index.html','clr-overlap-checker/index.html']:
+              p=Path(path); s=p.read_text(encoding='utf-8')
+              for old,new in replacements.items(): s=s.replace(old,new)
+              p.write_text(s,encoding='utf-8')
+      - name: Commit palette cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html clr-overlap-checker/index.html
-          git commit -m "Restyle GIS pages with Arial and blue theme"
+          git commit -m "Finish blue palette cleanup"
           git push

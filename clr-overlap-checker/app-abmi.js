@@ -110,7 +110,24 @@ function bufferedProjectPolygons(project) {
   return polygons;
 }
 
-async function classesForBufferedFeature(image, feature, found) {
+function addRawAtsForPoint(point, className, atsFeatures, rawAtsFn, rawByClass) {
+  if (!atsFeatures?.length || typeof rawAtsFn !== 'function') return;
+  for (const ats of atsFeatures) {
+    try {
+      if (!turf.booleanPointInPolygon(point, ats)) continue;
+      const raw = rawAtsFn(ats);
+      if (!raw) return;
+      if (!rawByClass.has(className)) rawByClass.set(className, new Map());
+      const key = raw.label || `${raw.ls || ''}|${raw.s || ''}|${raw.t || ''}|${raw.r || ''}|${raw.m || ''}`;
+      rawByClass.get(className).set(key, raw);
+      return;
+    } catch {
+      // Continue to another ATS polygon if an individual geometry is invalid.
+    }
+  }
+}
+
+async function classesForBufferedFeature(image, feature, found, atsFeatures, rawAtsFn, rawByClass) {
   const featureBbox = turf.bbox(feature);
   const windowInfo = rasterWindow(image, projectedBoundsForWgs84Bbox(featureBbox));
   if (!windowInfo) return;
@@ -122,7 +139,7 @@ async function classesForBufferedFeature(image, feature, found) {
   const maxCellsPerChunk = 350000;
   const rowsPerChunk = Math.max(1, Math.floor(maxCellsPerChunk / rowWidth));
 
-  for (let startY = y0; startY < y1 && found.size < ABMI_CLASS.size; startY += rowsPerChunk) {
+  for (let startY = y0; startY < y1; startY += rowsPerChunk) {
     const endY = Math.min(y1, startY + rowsPerChunk);
     const raster = await image.readRasters({
       window: [x0, startY, x1, endY],
@@ -131,27 +148,29 @@ async function classesForBufferedFeature(image, feature, found) {
     });
     const chunkRows = endY - startY;
 
-    for (let row = 0; row < chunkRows && found.size < ABMI_CLASS.size; row++) {
-      for (let col = 0; col < rowWidth && found.size < ABMI_CLASS.size; col++) {
+    for (let row = 0; row < chunkRows; row++) {
+      for (let col = 0; col < rowWidth; col++) {
         const value = Number(raster[row * rowWidth + col]);
         const className = ABMI_CLASS.get(value);
-        if (!className || found.has(className)) continue;
+        if (!className) continue;
 
         const px = x0 + col;
         const py = startY + row;
         const x = imgMinX + (px + 0.5) * xRes;
         const y = imgMaxY - (py + 0.5) * yRes;
         const [lon, lat] = proj4(AB10TM, WGS84, [x, y]);
+        const point = turf.point([lon, lat]);
 
-        if (turf.booleanPointInPolygon(turf.point([lon, lat]), feature)) {
+        if (turf.booleanPointInPolygon(point, feature)) {
           found.add(className);
+          addRawAtsForPoint(point, className, atsFeatures, rawAtsFn, rawByClass);
         }
       }
     }
   }
 }
 
-window.__screenAbmiWetlands = async function screenAbmiWetlands(project) {
+window.__screenAbmiWetlands = async function screenAbmiWetlands(project, bbox, atsFeatures = [], rawAtsFn, compactAtsFn) {
   const image = await getAbmiImage();
   const projectPolygons = bufferedProjectPolygons(project);
   if (!projectPolygons.length) {
@@ -159,17 +178,21 @@ window.__screenAbmiWetlands = async function screenAbmiWetlands(project) {
   }
 
   const found = new Set();
+  const rawByClass = new Map();
   for (const polygon of projectPolygons) {
-    await classesForBufferedFeature(image, polygon, found);
-    if (found.size === ABMI_CLASS.size) break;
+    await classesForBufferedFeature(image, polygon, found, atsFeatures, rawAtsFn, rawByClass);
   }
 
   const order = ['Open water', 'Fen', 'Bog', 'Marsh', 'Swamp'];
-  const hits = order.filter(name => found.has(name)).map(name => ({
-    name,
-    details: ['Mapped ABMI wetland class intersects the project'],
-    contact: ''
-  }));
+  const hits = order.filter(name => found.has(name)).map(name => {
+    const raw = [...(rawByClass.get(name)?.values() || [])];
+    return {
+      name,
+      details: ['Mapped ABMI wetland class intersects the project'],
+      contact: '',
+      ats: typeof compactAtsFn === 'function' ? compactAtsFn(raw) : []
+    };
+  });
 
   return {
     key: 'wetlands',
@@ -193,7 +216,7 @@ async function screenFma(project,bbox){
     const p=feature.properties||{};
     const name=clean(p.FMA_NAME)||'Forest Management Agreement';
     const details=[p.FMA_NUM?\`Agreement number: \${p.FMA_NUM}\`:'',p.FMA_CODE?\`FMA code: \${p.FMA_CODE}\`:'',p.EFFECTIVE?\`Effective: \${formatScreeningDate(p.EFFECTIVE)}\`:''];
-    return simpleEntry(name,details);
+    return simpleEntry(name,details,'',atsForFeature(feature,project.features,runAtsFeatures));
   });
   return {key:'fma',title:'Forest Management Agreements (FMA)',hits:dedupeEntries(entries),note:'Public Government of Alberta FMA layer. The FMA name identifies the agreement holder/name published with the agreement area.'};
 }
@@ -202,7 +225,7 @@ async function screenRfma(project,bbox){
   const entries=filterHits(project.features,data.features).map(feature=>{
     const p=feature.properties||{};
     const name=clean(p.RFMA_NAME)||'Registered Fur Management Area';
-    return simpleEntry(name,[p.RFMA_CODE?\`RFMA code: \${p.RFMA_CODE}\`:'']);
+    return simpleEntry(name,[p.RFMA_CODE?\`RFMA code: \${p.RFMA_CODE}\`:''],'',atsForFeature(feature,project.features,runAtsFeatures));
   });
   return {key:'rfma',title:'Registered Fur Management Areas',hits:dedupeEntries(entries),note:'Public Government of Alberta trapper-area boundaries. The public GIS layer provides RFMA name/code but does not publish the individual licence-holder name or contact information.'};
 }
@@ -218,7 +241,7 @@ async function loadScreeningApp() {
 
   source = source.replace(
     /async function screenWetlands\(project,bbox\)\{[\s\S]*?\n\}\nasync function screenIndigenous/,
-    "async function screenWetlands(project,bbox){\n  return window.__screenAbmiWetlands(project,bbox);\n}\nasync function screenIndigenous"
+    "async function screenWetlands(project,bbox){\n  return window.__screenAbmiWetlands(project,bbox,runAtsFeatures,rawAts,compactAtsLocations);\n}\nasync function screenIndigenous"
   );
   source = source.replaceAll('Alberta Merged Wetland Inventory', 'ABMI Wetland Inventory');
   source = source.replace(
@@ -229,7 +252,64 @@ async function loadScreeningApp() {
     "'screenClr','screenHistoric','screenParks','screenPluz','screenCaribou','screenSpecialWaters','screenWetlands','screenIndigenous','screenGreenWhite'",
     "'screenClr','screenHistoric','screenParks','screenPluz','screenCaribou','screenSpecialWaters','screenWetlands','screenFma','screenRfma','screenIndigenous','screenGreenWhite'"
   );
+  source = source.replace('let lastExportRows=[];', 'let lastExportRows=[];\nlet runAtsFeatures=[];');
+  source = source.replace(
+    "function simpleEntry(name,details=[],contact=''){return {name,details:details.filter(Boolean),contact}}\nfunction dedupeEntries(entries){return uniqueBy(entries,e=>`${e.name}|${e.details.join('|')}|${e.contact}`)}",
+    "function simpleEntry(name,details=[],contact='',ats=[]){return {name,details:details.filter(Boolean),contact,ats:[...(ats||[])]}}\nfunction dedupeEntries(entries){const map=new Map();for(const e of entries){const key=e.name+'|'+e.details.join('|')+'|'+e.contact;if(!map.has(key))map.set(key,{...e,ats:[...(e.ats||[])]});else{const current=map.get(key);current.ats=[...new Set([...(current.ats||[]),...(e.ats||[])])]}}return [...map.values()]}"
+  );
+  source = source.replace('const atsFeatures=await queryAts(bbox);', 'const atsFeatures=runAtsFeatures;');
+
+  source = source.replace(
+    "entries.push(simpleEntry(`HRV ${hrv}${category?` · ${category}`:''}`,[ats?`GOA listed ATS: ${ats}`:'']));",
+    "entries.push(simpleEntry(`HRV ${hrv}${category?` · ${category}`:''}`,[ats?`GOA listed ATS: ${ats}`:''],'',atsForFeature(feature,project.features,runAtsFeatures)));"
+  );
+  source = source.replace(
+    "return simpleEntry(clean(p.NAME)||'Protected area',[type,clean(p.SUBTYPE),p.STATUS?`Status: ${p.STATUS}`:'',p.OC_NO?`Order-in-Council: ${p.OC_NO}`:'']);",
+    "return simpleEntry(clean(p.NAME)||'Protected area',[type,clean(p.SUBTYPE),p.STATUS?`Status: ${p.STATUS}`:'',p.OC_NO?`Order-in-Council: ${p.OC_NO}`:''],'',atsForFeature(feature,project.features,runAtsFeatures));"
+  );
+  source = source.replace(
+    "return simpleEntry(clean(p.PLUZ_NAME)||'Public Land Use Zone',[clean(p.TYPE),p.PLUZ_CODE?`Code: ${p.PLUZ_CODE}`:''])",
+    "return simpleEntry(clean(p.PLUZ_NAME)||'Public Land Use Zone',[clean(p.TYPE),p.PLUZ_CODE?`Code: ${p.PLUZ_CODE}`:''],'',atsForFeature(feature,project.features,runAtsFeatures))"
+  );
+  source = source.replace(
+    "entries.push(simpleEntry(range||sub||'Caribou Range',[sub&&sub!==range?`Sub-unit: ${sub}`:'',status?`Status: ${status}`:'']));",
+    "entries.push(simpleEntry(range||sub||'Caribou Range',[sub&&sub!==range?`Sub-unit: ${sub}`:'',status?`Status: ${status}`:''],'',atsForFeature(feature,project.features,runAtsFeatures)));"
+  );
+  source = source.replace(
+    "return simpleEntry(`${zoneLabel}${name?` · ${name}`:''}`,[]);",
+    "return simpleEntry(`${zoneLabel}${name?` · ${name}`:''}`,[],'',atsForFeature(feature,project.features,runAtsFeatures));"
+  );
+  source = source.replace(
+    "entries.push(simpleEntry(`${kind}: ${name}`,details,contact));",
+    "entries.push(simpleEntry(`${kind}: ${name}`,details,contact,atsForFeature(feature,project.features,runAtsFeatures)));"
+  );
+  source = source.replace(
+    "entries.push(simpleEntry(`First Nations Reserve: ${clean(p.IRES_NAME)||'Unnamed reserve'}`,[p.IRES_CODE?`Code: ${p.IRES_CODE}`:'']))",
+    "entries.push(simpleEntry(`First Nations Reserve: ${clean(p.IRES_NAME)||'Unnamed reserve'}`,[p.IRES_CODE?`Code: ${p.IRES_CODE}`:''],'',atsForFeature(feature,project.features,runAtsFeatures)))"
+  );
+  source = source.replace(
+    "entries.push(simpleEntry(`Métis Settlement: ${clean(p.METIS_NAME)||'Unnamed settlement'}`,[p.METIS_CODE?`Code: ${p.METIS_CODE}`:'']))",
+    "entries.push(simpleEntry(`Métis Settlement: ${clean(p.METIS_NAME)||'Unnamed settlement'}`,[p.METIS_CODE?`Code: ${p.METIS_CODE}`:''],'',atsForFeature(feature,project.features,runAtsFeatures)))"
+  );
+  source = source.replace(
+    "return simpleEntry(clean(p.GWA_NAME)||'Green / White Area',[p.GWA_CODE?`Code: ${p.GWA_CODE}`:''])",
+    "return simpleEntry(clean(p.GWA_NAME)||'Green / White Area',[p.GWA_CODE?`Code: ${p.GWA_CODE}`:''],'',atsForFeature(feature,project.features,runAtsFeatures))"
+  );
+
   source = source.replace('function renderActions(actions){', `${EXTRA_SCREENERS}\nfunction renderActions(actions){`);
+  source = source.replace(
+    /function renderSimpleEntries\(hits\)\{[\s\S]*?\n\}\nfunction renderResults/,
+    "function renderSimpleEntries(hits){\n  if(!hits.length)return '<div class=\"no-hit\">No overlap found.</div>';\n  return '<div class=\"finding-list\">'+hits.map(hit=>'<div class=\"finding-row\"><div class=\"finding-main\"><strong>'+esc(hit.name)+'</strong>'+(hit.details?.length?'<div class=\"finding-details\">'+hit.details.map(esc).join(' · ')+'</div>':'')+(hit.contact?'<div class=\"finding-contact\">'+esc(hit.contact)+'</div>':'')+'<div class=\"finding-details\"><strong>Legal location(s) of intersection:</strong></div>'+renderAts(hit.ats||[])+'</div></div>').join('')+'</div>';\n}\nfunction renderResults"
+  );
+  source = source.replace(
+    "for(const hit of group.hits)rows.push({layer:group.title,finding:hit.name,details:(hit.details||[]).join(' | '),ats:'',contact:hit.contact||''});",
+    "for(const hit of group.hits)rows.push({layer:group.title,finding:hit.name,details:(hit.details||[]).join(' | '),ats:(hit.ats||[]).join('; '),contact:hit.contact||''});"
+  );
+  source = source.replace(
+    "const bbox=turf.bbox(project),groups=[];",
+    "const bbox=turf.bbox(project),groups=[];\n    showStatus('Resolving ATS legal locations...');\n    try{runAtsFeatures=await queryAts(bbox)}catch{runAtsFeatures=[]}"
+  );
+
   source = source.replace("{id:'screenWetlands',label:'Wetlands',run:screenWetlands}", "{id:'screenWetlands',label:'ABMI Wetland Inventory',run:screenWetlands}");
   source = source.replace(
     "{id:'screenWetlands',label:'ABMI Wetland Inventory',run:screenWetlands},",

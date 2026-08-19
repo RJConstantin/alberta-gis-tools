@@ -1,0 +1,40 @@
+name: One time Active CLR default
+on:
+  push:
+    paths:
+      - '.github/workflows/default-active-clr-2026-08-19.yml'
+permissions:
+  contents: write
+jobs:
+  update-default:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Active CLR as default status
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('clr-overlap-checker/app-abmi.js')
+          s = p.read_text(encoding='utf-8')
+          old = '''function resetCheckboxDefaults() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = false;
+  });
+}'''
+          new = '''function resetCheckboxDefaults() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = false;
+  });
+  const activeClr = document.getElementById('activeLayer');
+  if (activeClr) activeClr.checked = true;
+}'''
+          if old not in s:
+              raise SystemExit('Expected checkbox reset block was not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clr-overlap-checker/app-abmi.js
+          git commit -m "Select Active CLR by default"
+          git push

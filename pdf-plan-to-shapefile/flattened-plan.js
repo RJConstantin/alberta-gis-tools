@@ -5,7 +5,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
 
 const $ = (id) => document.getElementById(id);
 let ocrRunning = false;
-let placementMode = false;
 
 function cleanText(text) {
   return String(text || '')
@@ -69,7 +68,7 @@ function detectRotation(text) {
     .map((bearing) => {
       const offsets = [bearing - 90, bearing - 270];
       const rotation = offsets.sort((a, b) => Math.abs(a) - Math.abs(b))[0];
-      return { bearing, rotation };
+      return { rotation };
     })
     .filter((x) => Math.abs(x.rotation) <= 45)
     .sort((a, b) => Math.abs(a.rotation) - Math.abs(b.rotation));
@@ -78,22 +77,22 @@ function detectRotation(text) {
 
 function ensureMeridianSelector(legal) {
   let row = document.getElementById('ocrMeridianRow');
-  if (!row) {
-    row = document.createElement('div');
-    row.id = 'ocrMeridianRow';
-    row.style.cssText = 'margin:10px 0 0;padding:10px 12px;border:1px solid #d7e2ec;border-radius:7px;background:#f7fafc;font:12px Arial,Helvetica,sans-serif;color:#536776;';
-    row.innerHTML = '<strong>Meridian not visible in the OCR result.</strong> Choose it before locating the plan: <select id="ocrMeridian" style="margin-left:8px;padding:5px 7px;border:1px solid #c8d5df;border-radius:5px"><option value="">Select</option><option value="4">W4M</option><option value="5">W5M</option><option value="6">W6M</option></select>';
-    $('detectedBox')?.insertAdjacentElement('afterend', row);
-    document.getElementById('ocrMeridian').addEventListener('change', (e) => {
-      const mer = Number(e.target.value);
-      if (!mer) return;
-      setValue('legalInput', `${legal.lsd}-${legal.sec}-${legal.twp}-${legal.rge}-W${mer}M`);
-      $('locatePlan')?.click();
-    });
-  }
+  if (row) return;
+  row = document.createElement('div');
+  row.id = 'ocrMeridianRow';
+  row.style.cssText = 'margin:10px 0 0;padding:10px 12px;border:1px solid #d7e2ec;border-radius:7px;background:#f7fafc;font:12px Arial,Helvetica,sans-serif;color:#536776;';
+  row.innerHTML = '<strong>Meridian was not readable.</strong> Choose it before locating the plan: <select id="ocrMeridian" style="margin-left:8px;padding:5px 7px;border:1px solid #c8d5df;border-radius:5px"><option value="">Select</option><option value="4">W4M</option><option value="5">W5M</option><option value="6">W6M</option></select>';
+  $('detectedBox')?.insertAdjacentElement('afterend', row);
+  document.getElementById('ocrMeridian').addEventListener('change', (e) => {
+    const mer = Number(e.target.value);
+    if (!mer) return;
+    setValue('legalInput', `${legal.lsd}-${legal.sec}-${legal.twp}-${legal.rge}-W${mer}M`);
+    $('locatePlan')?.click();
+    if ($('widthInput')?.value && $('heightInput')?.value) setTimeout(() => $('applyRectangle')?.click(), 900);
+  });
 }
 
-function renderOcrFindings(text, legal, dims, rotation) {
+function renderOcrFindings(legal, dims, rotation) {
   const lines = ['<strong>Flattened plan OCR results:</strong>'];
   if (legal) {
     const suffix = legal.mer ? `-W${legal.mer}M` : ' (meridian needs confirmation)';
@@ -101,6 +100,7 @@ function renderOcrFindings(text, legal, dims, rotation) {
   }
   if (dims) lines.push(`Repeated plan dimension candidate: ${dims.width} m`);
   if (Number.isFinite(rotation)) lines.push(`Plan rotation candidate: ${rotation.toFixed(2)}°`);
+  if (!legal && !dims) lines.push('No reliable legal location or repeated site dimension was recognized.');
   lines.push('<span class="detected-note">OCR is approximate. Confirm the final shape and location on the map before downloading.</span>');
   $('detectedBox').innerHTML = lines.join('<br>');
 }
@@ -114,8 +114,7 @@ async function renderHighResolutionPage(file) {
   if (nativeText.length > 80) return { nativeText, canvas: null };
 
   const base = page.getViewport({ scale: 1 });
-  const targetWidth = 2800;
-  const scale = targetWidth / base.width;
+  const scale = 2800 / base.width;
   const viewport = page.getViewport({ scale });
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(viewport.width);
@@ -128,7 +127,7 @@ async function runOcrFallback(file) {
   if (ocrRunning || !file) return;
   ocrRunning = true;
   try {
-    const { nativeText, canvas } = await renderHighResolutionPage(file);
+    const { canvas } = await renderHighResolutionPage(file);
     if (!canvas) return;
 
     $('pdfConfidence').textContent = 'Flattened plan detected';
@@ -163,17 +162,17 @@ async function runOcrFallback(file) {
     }
     if (Number.isFinite(rotation) && Math.abs(rotation) > 0.05) setValue('rotationInput', rotation.toFixed(2));
 
-    renderOcrFindings(text, legal, dims, rotation);
-    $('pdfConfidence').textContent = legal || dims ? 'OCR plan details found' : 'Manual map positioning required';
+    renderOcrFindings(legal, dims, rotation);
+    $('pdfConfidence').textContent = legal || dims ? 'OCR plan details found' : 'Manual positioning required';
 
     if (legal?.mer) {
       $('pdfStatus').textContent = 'OCR found plan information. Locating the candidate area on the ATS map…';
       $('locatePlan')?.click();
-      if (dims) setTimeout(() => $('applyRectangle')?.click(), 1200);
+      if (dims) setTimeout(() => $('applyRectangle')?.click(), 1000);
     } else if (legal) {
       $('pdfStatus').textContent = 'OCR found the legal location numbers, but not the meridian. Choose W4M, W5M, or W6M, then verify the location on the map.';
     } else {
-      $('pdfStatus').textContent = 'OCR finished, but it could not confidently identify a legal location. Use the plan preview and map to position the boundary manually.';
+      $('pdfStatus').textContent = 'OCR finished, but it could not confidently identify the legal location. You can still enter the legal location and draw or edit the boundary on the map.';
     }
   } catch (err) {
     console.error('Flattened plan OCR failed', err);
@@ -184,89 +183,6 @@ async function runOcrFallback(file) {
   }
 }
 
-function addMapPlacementControl() {
-  const mapButtons = document.querySelector('.map-buttons');
-  if (!mapButtons || document.getElementById('placeAtMapCentre')) return;
-
-  const centre = document.createElement('button');
-  centre.type = 'button';
-  centre.id = 'placeAtMapCentre';
-  centre.className = 'secondary';
-  centre.textContent = 'Place boundary at map centre';
-  centre.addEventListener('click', () => {
-    const map = window.__pdfPlanMap;
-    if (!map) return;
-    const c = map.getCenter();
-    setValue('latInput', c.lat.toFixed(7));
-    setValue('lonInput', c.lng.toFixed(7));
-    $('applyRectangle')?.click();
-  });
-
-  const click = document.createElement('button');
-  click.type = 'button';
-  click.id = 'clickToPlaceBoundary';
-  click.className = 'secondary';
-  click.textContent = 'Click map to place: off';
-  click.addEventListener('click', () => {
-    placementMode = !placementMode;
-    click.textContent = `Click map to place: ${placementMode ? 'on' : 'off'}`;
-    click.style.background = placementMode ? '#e7f0f8' : '';
-  });
-
-  mapButtons.prepend(click);
-  mapButtons.prepend(centre);
-}
-
-function hookMapForPlacement() {
-  const wait = () => {
-    const mapEl = $('planMap');
-    if (!mapEl || !window.L) return setTimeout(wait, 300);
-    const keys = Object.keys(mapEl).filter((k) => k.startsWith('_leaflet'));
-    // app.js exposes no public map variable. Capture Leaflet map from the map DOM event target instead.
-    mapEl.addEventListener('click', (event) => {
-      if (!placementMode) return;
-      const rect = mapEl.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const map = window.__pdfPlanMap;
-      if (!map) return;
-      const latlng = map.containerPointToLatLng([x, y]);
-      setValue('latInput', latlng.lat.toFixed(7));
-      setValue('lonInput', latlng.lng.toFixed(7));
-      $('applyRectangle')?.click();
-      placementMode = false;
-      $('clickToPlaceBoundary').textContent = 'Click map to place: off';
-      $('clickToPlaceBoundary').style.background = '';
-    });
-    void keys;
-  };
-  wait();
-}
-
-function captureLeafletMap() {
-  const originalMap = window.L?.map;
-  if (!originalMap || originalMap.__pdfCaptureWrapped) return;
-  const wrapped = function(...args) {
-    const map = originalMap.apply(this, args);
-    if (args[0] === 'planMap' || args[0]?.id === 'planMap') window.__pdfPlanMap = map;
-    return map;
-  };
-  Object.assign(wrapped, originalMap);
-  wrapped.__pdfCaptureWrapped = true;
-  window.L.map = wrapped;
-}
-
-function waitForLeafletAndControls() {
-  const timer = setInterval(() => {
-    if (window.L) captureLeafletMap();
-    addMapPlacementControl();
-    if (window.__pdfPlanMap && document.getElementById('placeAtMapCentre')) {
-      clearInterval(timer);
-      hookMapForPlacement();
-    }
-  }, 250);
-}
-
 const input = $('planPdfInput');
 if (input) {
   input.addEventListener('change', (e) => {
@@ -275,5 +191,3 @@ if (input) {
     setTimeout(() => runOcrFallback(file), 250);
   });
 }
-
-waitForLeafletAndControls();

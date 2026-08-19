@@ -39,8 +39,30 @@
     .brand{
       display:flex;
       align-items:center;
+      gap:11px;
       font-size:15px;
       font-weight:700;
+    }
+
+    .brand-mark{
+      width:28px;
+      height:28px;
+      border-radius:7px;
+      display:grid;
+      place-items:center;
+      background:var(--blue);
+      color:#fff;
+      flex:0 0 28px;
+    }
+
+    .brand-mark svg{
+      width:18px;
+      height:22px;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:1.45;
+      stroke-linecap:round;
+      stroke-linejoin:round;
     }
 
     .status{
@@ -238,7 +260,14 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Alberta GIS Tools</div>
+    <div class="brand">
+      <span class="brand-mark" aria-label="Outline of Alberta">
+        <svg viewBox="0 0 18 24" aria-hidden="true">
+          <path d="M4.9 1.5h9.6v21H4.1l-.3-2.1.7-1.8-.8-2.1.9-2.1-.9-2 .8-2.2-.7-2 .9-2.2-.5-2.1.7-2.4Z"/>
+        </svg>
+      </span>
+      <span>Alberta GIS Tools</span>
+    </div>
     <div class="status">
       <span class="status-dot"></span>
       Browser-based GIS utilities

@@ -1,0 +1,36 @@
+name: Match spatial header icon
+on:
+  push:
+    paths:
+      - '.github/workflows/match-spatial-header-icon-2026-08-19.yml'
+permissions:
+  contents: write
+jobs:
+  update-icon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Match spatial header icon to landing page
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('clr-overlap-checker/index.html')
+          s = p.read_text(encoding='utf-8')
+          old_css = '.brand-mark{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--blue);color:#fff;font:700 17px Arial,Helvetica,sans-serif}'
+          new_css = old_css + '.brand-mark svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'
+          if old_css in s and '.brand-mark svg{' not in s:
+              s = s.replace(old_css, new_css, 1)
+          old = '<div class="brand"><div class="brand-mark">A</div><div>Alberta GIS Tools</div></div>'
+          new = '''<div class="brand"><div class="brand-mark" aria-label="Spatial screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 7 8.5-4 8.5 4-8.5 4-8.5-4Z"/><path d="m3.5 11 8.5 4 8.5-4"/><path d="m3.5 15 8.5 4 4.2-2"/><circle cx="18.2" cy="17.2" r="2.6"/><path d="m20.1 19.1 2 2"/></svg></div><div>Alberta GIS Tools</div></div>'''
+          if old not in s:
+              raise SystemExit('Spatial header brand block not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clr-overlap-checker/index.html
+          git commit -m "Match spatial screening header icon"
+          git push

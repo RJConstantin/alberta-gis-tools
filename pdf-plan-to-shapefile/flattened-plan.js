@@ -104,6 +104,20 @@ function setValue(id, value) {
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function clearPreviousPlanFields() {
+  ['legalInput','latInput','lonInput','widthInput','heightInput'].forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.value = '';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const rotation = $('rotationInput');
+  if (rotation) {
+    rotation.value = '0';
+    rotation.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
 function detectMeridian(text) {
   const patterns = [
     /\bW\s*([456])\s*M\b/i,
@@ -384,6 +398,7 @@ async function runOcrFallback(file) {
 function handlePossibleFlattenedFile(file) {
   if (!file) return;
   resetFlattenedMode();
+  clearPreviousPlanFields();
   setTimeout(() => runOcrFallback(file), 250);
 }
 

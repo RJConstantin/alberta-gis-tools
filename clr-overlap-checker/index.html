@@ -75,7 +75,7 @@
       <details class="advanced">
         <summary>CLR status options</summary>
         <div class="checks">
-          <label class="check"><input id="activeLayer" type="checkbox"> Active CLR</label>
+          <label class="check"><input id="activeLayer" type="checkbox" checked> Active CLR</label>
           <label class="check"><input id="applicationLayer" type="checkbox"> CLR applications</label>
           <label class="check"><input id="cancelledLayer" type="checkbox"> Cancelled CLR</label>
         </div>
@@ -106,6 +106,14 @@
   </main>
 
   <script type="module" src="./app-abmi.js"></script>
+  <script type="module">
+    const setActiveClrDefault = () => {
+      const activeClr = document.getElementById('activeLayer');
+      if (activeClr) activeClr.checked = true;
+    };
+    setActiveClrDefault();
+    window.addEventListener('pageshow', setActiveClrDefault);
+  </script>
 <footer class="site-disclaimer"><strong>Disclaimer:</strong> These browser based GIS tools are intended for preliminary screening, data preparation and general reference. Results depend on the accuracy, completeness, availability and currency of the source data and services. Verify outputs against the applicable authoritative source before using them for regulatory submissions, surveying, field decisions or other professional work.</footer>
 </body>
 </html>

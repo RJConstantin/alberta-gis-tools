@@ -7,7 +7,7 @@
   <style>
     :root{--ink:#172229;--muted:#67747a;--line:#dce3e1;--paper:#fbfcfa;--blue:#2463a0;--blue-dark:#174a78;--mint:#e7f0f8;--sand:#f2f0e9;--warn:#865a22;--warnbg:#fff7e9;--bad:#8a3830;--badbg:#fff2f0;--clear:#4b6f91;--clearbg:#eef4fa}
     *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}button,input{font:inherit}a{color:var(--blue)}
-    .topbar{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(22px,5vw,72px);border-bottom:1px solid var(--line);background:#fbfcfaf5}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:700}.brand-mark{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--blue);color:#fff;font:700 17px Arial,Helvetica,sans-serif}.home{color:var(--blue);font-size:13px;font-weight:700;text-decoration:none}
+    .topbar{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(22px,5vw,72px);border-bottom:1px solid var(--line);background:#fbfcfaf5}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:700}.brand-mark{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--blue);color:#fff;font:700 17px Arial,Helvetica,sans-serif}.brand-mark svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.home{color:var(--blue);font-size:13px;font-weight:700;text-decoration:none}
     .hero{background:var(--sand);border-bottom:1px solid var(--line);padding:62px clamp(24px,12vw,180px) 57px}.eyebrow,.section-label{color:var(--blue);letter-spacing:1.3px;text-transform:uppercase;font-size:11px;font-weight:800}.hero h1{max-width:820px;margin:14px 0 15px;font:700 clamp(38px,5vw,66px)/1 Arial,Helvetica,sans-serif;letter-spacing:-2.2px}.hero p{max-width:780px;margin:0;color:#516066;font-size:17px;line-height:1.55}
     .workspace{max-width:1120px;margin:0 auto;padding:46px 24px 80px}.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px;margin-bottom:20px}.card h2{margin:10px 0 8px;font:700 25px/1.15 Arial,Helvetica,sans-serif}.copy{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
     .dropzone{width:100%;min-height:155px;border:1.5px dashed #aabac8;border-radius:9px;background:#fbfcfe;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;color:#66747a;cursor:pointer;padding:20px}.dropzone:hover,.dropzone.dragging{border-color:var(--blue);background:#f2f6fb}.dropzone strong{color:var(--ink);font-size:14px}.dropzone small{font-size:12px;color:#84909f}.upload-symbol{font-size:27px;color:var(--blue);line-height:1}.hidden-input{display:none}.file-name{font-size:13px;font-weight:700;color:var(--ink);margin-top:11px;overflow-wrap:anywhere}
@@ -28,7 +28,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><div class="brand-mark">A</div><div>Alberta GIS Tools</div></div>
+    <div class="brand"><div class="brand-mark" aria-label="Spatial screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 7 8.5-4 8.5 4-8.5 4-8.5-4Z"/><path d="m3.5 11 8.5 4 8.5-4"/><path d="m3.5 15 8.5 4 4.2-2"/><circle cx="18.2" cy="17.2" r="2.6"/><path d="m20.1 19.1 2 2"/></svg></div><div>Alberta GIS Tools</div></div>
     <a class="home" href="../">Back to tools</a>
   </header>
 

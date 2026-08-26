@@ -27,8 +27,8 @@
 
   <section class="hero">
     <div class="eyebrow">Survey plan conversion</div>
-    <h1>Turn a PDF plan into a map-confirmed shapefile.</h1>
-    <p>Upload a D56 or survey plan PDF, use any coordinates or legal-location information available in the plan, verify the proposed boundary on the map, and confirm it before download.</p>
+    <h1>Turn a PDF plan into a map confirmed shapefile.</h1>
+    <p>Upload a D56 or survey plan PDF, use any coordinates or legal location information available in the plan, verify the proposed boundary on the map and confirm it before download.</p>
   </section>
 
   <main class="content">
@@ -47,7 +47,7 @@
         <label class="dropzone" id="planPdfDrop" for="planPdfInput">
           <span class="upload-arrow">↑</span>
           <strong id="planPdfName">Drop a survey plan PDF here or click to browse</strong>
-          <span>Digital/vector PDFs are read directly. Flattened image-based plans automatically use an OCR fallback to look for the legal location, dimensions, and bearings.</span>
+          <span>Digital/vector PDFs are read directly. Flattened image based plans automatically use an OCR fallback to look for the legal location, dimensions and bearings.</span>
         </label>
         <div class="status" id="pdfStatus">No PDF loaded.</div>
         <div class="preview-wrap hidden" id="pdfPreviewWrap">
@@ -57,7 +57,7 @@
 
       <section class="card">
         <div class="step-label">02 &nbsp; Plan information</div>
-        <div class="detected-box" id="detectedBox">Upload a PDF to detect coordinates and legal-location text.</div>
+        <div class="detected-box" id="detectedBox">Upload a PDF to detect coordinates and legal location text.</div>
 
         <div class="fields">
           <label>Legal location
@@ -97,7 +97,7 @@
         <div>
           <div class="step-label">03 &nbsp; Confirm boundary on map</div>
           <h2>Verify the actual location and shape.</h2>
-          <p>Use satellite or street imagery, the ATS grid, and the map editing tools. You can redraw the polygon or move individual vertices. Any edit clears the confirmation.</p>
+          <p>Use satellite or street imagery, the ATS grid and the map editing tools. You can redraw the polygon or move individual vertices. Any edit clears the confirmation.</p>
         </div>
         <div class="button-row map-buttons">
           <button type="button" class="secondary" id="toggleAts">ATS grid: on</button>

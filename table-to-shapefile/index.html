@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Points to Shapefile | Alberta GIS Tools</title>
+  <link rel="stylesheet" href="../shared/tool.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/@mapbox/shp-write@0.4.3/shpwrite.js"></script>
+  <script src="../shared/crs.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 2h14v20h-7l-.4-.7-.6-.4-.2-.7-.6-.5-.3-.8-.6-.5-.3-.7-.6-.7-.2-.8-.6-.5-.2-.6-.5-.4-.3-.7-.6-.4H5Z"/></svg>
+      </span>
+      <span>Alberta GIS Tools</span>
+    </a>
+    <a class="back-link" href="../">← All tools</a>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">Point Data Utility</div>
+    <h1>Points to Shapefile</h1>
+    <p>Turn an Excel table, CSV, or copied and pasted point list into a point shapefile. Choose the coordinate columns, define the coordinate system, select the attributes to keep, and name the output file.</p>
+    <div class="privacy"><span class="privacy-dot"></span>Files are processed in your browser and are not uploaded to a server.</div>
+  </section>
+
+  <main class="workspace">
+    <section class="card">
+      <h2>1. Add point data</h2>
+      <p class="help">Use an Excel or CSV file, or paste rows copied directly from Excel or another table.</p>
+
+      <div class="source-tabs">
+        <button id="tab-file" class="active" type="button">Excel / CSV</button>
+        <button id="tab-paste" type="button">Paste points</button>
+      </div>
+
+      <div id="file-panel">
+        <div class="upload">
+          <label class="field">Choose a file
+            <input id="file-input" type="file" accept=".xlsx,.xls,.csv">
+          </label>
+        </div>
+        <div id="sheet-row" class="grid hidden" style="margin-top:16px">
+          <label class="field">Worksheet
+            <select id="sheet-select"></select>
+          </label>
+          <label class="field">Table setup
+            <select id="file-header">
+              <option value="yes" selected>First row contains field names</option>
+              <option value="no">First row is data</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="paste-panel" class="hidden">
+        <label class="field">Paste table
+          <textarea id="paste-input" placeholder="Name&#9;Easting&#9;Northing&#10;Point 1&#9;501308.33&#9;6350179.60&#10;Point 2&#9;504129.86&#9;6350567.32"></textarea>
+        </label>
+        <div class="row" style="margin-top:12px">
+          <label class="field" style="min-width:240px">Table setup
+            <select id="paste-header">
+              <option value="yes" selected>First row contains field names</option>
+              <option value="no">First row is data</option>
+            </select>
+          </label>
+          <button id="read-paste" type="button">Read Pasted Points</button>
+        </div>
+      </div>
+
+      <div id="input-status" class="status">No point data loaded.</div>
+    </section>
+
+    <section id="mapping-card" class="card hidden">
+      <h2>2. Set the coordinate fields</h2>
+      <p class="help">Select which columns contain X and Y. For projected systems, X is Easting and Y is Northing. For latitude / longitude, X is Longitude and Y is Latitude.</p>
+      <div class="grid-3">
+        <label class="field">X field
+          <select id="x-field"></select>
+        </label>
+        <label class="field">Y field
+          <select id="y-field"></select>
+        </label>
+        <label class="field">Coordinate system
+          <select id="crs-select"></select>
+        </label>
+      </div>
+      <p id="crs-note" class="note"></p>
+
+      <div class="divider"></div>
+      <h3>Fields to keep</h3>
+      <p class="help">All fields are kept by default. Shapefile attribute names are limited to 10 characters, so longer names will be shortened in the DBF.</p>
+      <div class="row">
+        <button id="select-all" class="ghost" type="button">Select all</button>
+        <button id="select-none" class="ghost" type="button">Select none</button>
+      </div>
+      <div id="field-list" class="field-list"></div>
+
+      <div id="preview-wrap" class="table-wrap"></div>
+    </section>
+
+    <section id="export-card" class="card hidden">
+      <h2>3. Create the shapefile</h2>
+      <p class="help">The download is a ZIP containing the shapefile components, including the projection file.</p>
+      <div class="grid">
+        <label class="field">Output shapefile name
+          <input id="output-name" type="text" value="points" maxlength="80">
+        </label>
+        <div class="field">
+          <span style="display:block;margin-bottom:7px">Ready to export</span>
+          <button id="export-button" type="button" style="width:100%">Create Shapefile ZIP</button>
+        </div>
+      </div>
+      <div id="export-status" class="status">Choose the coordinate fields and coordinate system before exporting.</div>
+    </section>
+  </main>
+
+  <footer class="footer">Alberta GIS Tools · Points to Shapefile</footer>
+  <script src="app.js"></script>
+</body>
+</html>
